@@ -11,7 +11,7 @@ const {MongoClient} = require('mongodb');
 
 
 const uri = process.env.MONGODB_URI;
-const dbName = 'dear-stranger';
+const dbName = process.env.DB_NAME;
 const mongoClient = new MongoClient(uri);
 const port = process.env.PORT;
 
