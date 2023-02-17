@@ -24,7 +24,7 @@ class Message {
    * @param {string?} inResponseTo UUID of the message being responded to.
    * @param {string} body Body of the message.
    * @param {number} timestamp Timestamp in seconds of the message.
-   * @param {number} hue Id of the message mood color.
+   * @param {string} hue Id of the message mood color.
    * @param {string} senderUuid UUID of the sender.
    */
   constructor(uuid, inResponseTo, body, timestamp, hue, senderUuid) {
