@@ -136,11 +136,11 @@ app.get('/messages', async (request, response) => {
 app.post('/messages', async (request, response) => {
   const message = new Message(
       request.body.uuid,
-      request.body.senderUuid,
       request.body.inResponseTo,
       request.body.body,
       request.body.timestamp,
       request.body.hue,
+      request.body.senderUuid,
   );
   await addMessage(message);
   response.send(message);
