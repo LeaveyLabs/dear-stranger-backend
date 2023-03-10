@@ -14,6 +14,7 @@ const uri = process.env.MONGODB_URI;
 const dbName = process.env.DB_NAME;
 const mongoClient = new MongoClient(uri);
 const port = process.env.PORT;
+const adminUuid = process.env.ADMIN_UUID;
 
 /**
  * An anonymous message.
@@ -72,17 +73,17 @@ async function addMessage(message) {
 }
 
 /**
- * One user reports another for inappropriate behavior.
+ * One user reports an inappropriate letter.
  */
 class Report {
   /**
    * @param {string} reporterUuid UUID of the reporter.
-   * @param {string} reportedUuid UUID of the reported.
+   * @param {string} letterUuid UUID of the reported letter.
    * @param {string} explanation Explanation for the report.
    */
-  constructor(reporterUuid, reportedUuid, explanation) {
+  constructor(reporterUuid, letterUuid, explanation) {
     this.reporterUuid = reporterUuid;
-    this.reportedUuid = reportedUuid;
+    this.letterUuid = letterUuid;
     this.explanation = explanation;
   }
 }
@@ -100,7 +101,7 @@ async function getAllReports() {
   await reportCursor.forEach((doc) => {
     reports.push(new Report(
         doc.reporterUuid,
-        doc.reportedUuid,
+        doc.letterUuid,
         doc.explanation,
     ));
   });
@@ -118,6 +119,32 @@ async function addReport(report) {
   await reportCollection.insertOne(report);
 }
 
+/**
+ * Deletes letter specificed by a UUID
+ * @param {string} uuid UUID of the letter to be deleted.
+ */
+async function deleteLetter(uuid) {
+  await mongoClient.connect();
+  const dearStrangerClient = mongoClient.db(dbName);
+  const messageCollection = dearStrangerClient.collection('messages');
+  await messageCollection.deleteOne({'uuid': uuid});
+}
+
+/**
+ * Returns whether a letter is beyond the report limit and should be deleted
+ * @param {string} uuid UUID of a letter
+ * @return {boolean}
+ */
+async function isBeyondReportLimit(uuid) {
+  const reports = await getAllReports();
+  let reportCount = 0;
+  for (const report of reports) {
+    if (report.letterUuid === uuid) {
+      reportCount += 1;
+    }
+  }
+  return reportCount > 3;
+}
 
 // Server Endpoints
 const app = express();
@@ -153,10 +180,19 @@ app.get('/reports', async (request, response) => {
 app.post('/reports', async (request, response) => {
   const report = new Report(
       request.body.reporterUuid,
-      request.body.reportedUuid,
+      request.body.letterUuid,
       request.body.explanation,
   );
+
   await addReport(report);
+
+  const isAdminReport = request.body.reporterUuid == adminUuid;
+  const isBeyondLimit = await isBeyondReportLimit(request.body.letterUuid);
+
+  if (isAdminReport || isBeyondLimit) {
+    await deleteLetter(uuid);
+  }
+
   response.send(report);
 });
 
